@@ -11,7 +11,7 @@
       DOUBLE PRECISION R(NT,3)	! Conformation of polymer chains
       INTEGER AB(NT)            ! Chemical identity of beads
       INTEGER N					! Length of each polymer chain
-	  INTEGER NP
+	   INTEGER NP
       INTEGER NT                ! Number of beads
       INTEGER NTOT              ! Total number of polymers
       

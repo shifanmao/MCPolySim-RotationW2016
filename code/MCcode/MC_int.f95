@@ -5,6 +5,10 @@
 !     a small Monte Carlo move in the position.
 !     
 !     Corrections to force magnitude made 6-3-04.
+!
+!     Updated 2/22/16 Kevin J Hou
+!     Calculate Order Parameters S_ij(u) and S_ij(W)
+!     Wrap into 
 !     
 !     Andrew Spakowitz
 !     Written 6-29-04
@@ -20,7 +24,6 @@
       
 !     Simulation input variables
       
-
       DOUBLE PRECISION V        ! Monomer volume
       DOUBLE PRECISION CHI      ! Chi parameter value
       DOUBLE PRECISION KAP      ! Compressibility value
@@ -56,11 +59,19 @@
       DOUBLE PRECISION RBIN(3)
       INTEGER INDBIN
       INTEGER ISX,ISY,ISZ
+
+!     Variables for Order Parameters
+
+      DOUBLE PRECISION SIJU(NBIN,3,3)
+      DOUBLE PRECISION SIJV(NBIN,3,3)
+      DOUBLE PRECISION ESOLD
+      DOUBLE PRECISION ESNEW
       
+      ! Initialize Phi-Interaction Terms
       do 10 I=1,NBIN
          DPHIA(I)=0.
          DPHIB(I)=0.
-	 INDPHI(I)=0
+	      INDPHI(I)=0
  10   continue
       NBINX=nint(LBOX/DEL)
 
@@ -72,6 +83,7 @@
       
       NPHI=0
       
+      ! Set Up Bins
       do 20 IB=I1,I2
          RBIN(1)=R(IB,1)-nint(R(IB,1)/LBOX-0.5)*LBOX
          RBIN(2)=R(IB,2)-nint(R(IB,2)/LBOX-0.5)*LBOX

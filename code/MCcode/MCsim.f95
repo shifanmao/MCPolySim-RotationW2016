@@ -3,10 +3,11 @@
 !     This subroutine performs a Monte Carlo simulation on the 
 !     polymer chain.
       
-      SUBROUTINE MCsim(R,U,PHIA,PHIB,AB,NT,N,NP,NBIN, &
-          NSTEP,BROWN,INTON,PARA,V,CHI,KAP,LBOX,L0,DEL, &          
-          MCAMP,SUCCESS,MOVEON,WINDOW,PHIT,KVEC,SVEC,SON, &
-          PTON,IND,NRABOVE,NRBELOW,NRMAX,NRNOW,ECHI,NPT,PTID)
+      SUBROUTINE MCsim(R,U,W,PHIA,PHIB,AB,NT,N,NP,NBIN, &
+          NSTEP,BROWN,INTON,PARA,V,CHI,KAP,TAU,AU,AUV,AV,LBOX,L0,& 
+          DEL,MCAMP,SUCCESS,MOVEON,WINDOW,PHIT,KVEC,SVEC,SON, &
+          PTON,IND,NRABOVE,NRBELOW,NRMAX,NRNOW,ECHI,NPT,PTID, &
+          SijU,SijW,dSijU,dSijW,EALIGN,SijE)
 
       use mt19937, only : grnd, sgrnd, rnorm, mt, mti
       
@@ -34,9 +35,11 @@
       DOUBLE PRECISION SK(KNUM)
       DOUBLE PRECISION R(NT,3)  ! Bead positions
       DOUBLE PRECISION U(NT,3)  ! Tangent vectors
+      DOUBLE PRECISION W(NT,3)  ! Twist vectors (KHOU)
       INTEGER AB(NT)            ! Chemical identity of beads
       DOUBLE PRECISION RP(NT,3)  ! Bead positions
       DOUBLE PRECISION UP(NT,3)  ! Tangent vectors
+      DOUBLE PRECISION WP(NT,3)  ! Twist vectors (KHOU)
       INTEGER N,NP,NT           ! Number of beads
       INTEGER NBIN              ! Number of bins
       INTEGER NSTEP             ! Number of MC steps
@@ -63,27 +66,30 @@
 !     Energy variables
       
       DOUBLE PRECISION DEELAS   ! Change in bending energy
-      DOUBLE PRECISION DEINT   ! Change in self energy
+      DOUBLE PRECISION DEINT    ! Change in self energy
       DOUBLE PRECISION DEEX     ! Change in external energy
+      DOUBLE PRECISION DETWIST  ! Change in twist energy (KHOU)
       DOUBLE PRECISION ENERGY
+      DOUBLE PRECISION EALIGN  ! Need this to initialize the Sij calc
       
-!     MC adaptation variables
+!     MC adaptation variables (KHOU)
       
-      DOUBLE PRECISION MCAMP(6) ! Amplitude of random change      
+      DOUBLE PRECISION MCAMP(7) ! Amplitude of random change      
       INTEGER MCTYPE            ! Type of MC move
-      INTEGER NADAPT(6)         ! Num steps btwn adapt
-      DOUBLE PRECISION PHIT(6)     ! % hits per total steps
-      DOUBLE PRECISION PDESIRE(6) ! Desired hit rate
-      INTEGER SUCCESS(6)        ! Number of successes
-      DOUBLE PRECISION MINAMP(6) ! Minimum amp to stop
-      DOUBLE PRECISION MAXAMP(6) ! Minimum amp to stop
-      INTEGER MOVEON(6)			! Is the move active
-      INTEGER WINDOW(6)			! Size of window for bead selection
+      INTEGER NADAPT(7)         ! Num steps btwn adapt
+      DOUBLE PRECISION PHIT(7)     ! % hits per total steps
+      DOUBLE PRECISION PDESIRE(7) ! Desired hit rate
+      INTEGER SUCCESS(7)        ! Number of successes
+      DOUBLE PRECISION MINAMP(7) ! Minimum amp to stop
+      DOUBLE PRECISION MAXAMP(7) ! Minimum amp to stop
+      INTEGER MOVEON(7)			! Is the move active
+      INTEGER WINDOW(7)			! Size of window for bead selection
       
 !     Variables in the simulation
       
       DOUBLE PRECISION EB,EPAR,EPERP
-      DOUBLE PRECISION GAM,ETA
+      DOUBLE PRECISION GAM,ETA,TAU
+      DOUBLE PRECISION AU,AUV,AV
       DOUBLE PRECISION XIR,XIU
       DOUBLE PRECISION LHC      ! Length of HC int
       DOUBLE PRECISION VHC      ! HC strength
@@ -104,7 +110,18 @@
       DOUBLE PRECISION DPHIA(NBIN) ! Volume fraction of A
       DOUBLE PRECISION DPHIB(NBIN) ! Volume fraction of B
       INTEGER INDPHI(NBIN)      ! Indices of the phi
+      INTEGER INDSij(NBIN)      ! Indices of Sij
       INTEGER NPHI		! Number of phi values that change
+
+!     Placeholder Variables for Alignment Energy
+      DOUBLE PRECISION DEALIGN   ! Change in Alignment Energy
+      DOUBLE PRECISION EALIGNOLD ! Alignment Energy before move
+      DOUBLE PRECISION EALIGNNEW ! Alignment Energy after move
+      DOUBLE PRECISION SijU(NBIN,3,3)  ! Order Parameter Sij(u) before move
+      DOUBLE PRECISION SijW(NBIN,3,3)  ! Order Parameter Sij(v) before move
+      DOUBLE PRECISION dSijU(NBIN,3,3) ! Order Parameter Sij(u) after move
+      DOUBLE PRECISION dSijW(NBIN,3,3) ! Order Parameter Sij(v) after move
+      DOUBLE PRECISION SijE(NBIN)     ! Energy per bin 
       
 !     Load the input parameters
       
@@ -156,6 +173,12 @@
       if (NSTEP.LE.NADAPT(6)) then
          NADAPT(6)=NSTEP
       endif
+
+      !KHOU 
+      NADAPT(7)=1000
+      if (NSTEP.LE.NADAPT(7)) then
+         NADAPT(7)=NSTEP
+      endif
       
       PDESIRE(1)=0.5
       PDESIRE(2)=0.5
@@ -171,14 +194,26 @@
       SUCCESS(5)=0
       SUCCESS(6)=0
 
+      !KHOU
+      PDESIRE(7)=0.5
+      SUCCESS(7)=0
+      MAXAMP(7) = 1.0*PI
+      MINAMP(7) = 0.2*PI
+
       DEELAS=0.
       DEINT=0.
+      DEALIGN=0.
 
       if (INTON.EQ.1) then
          call r_to_phi(R,AB,NT,N,NP,NTOT,NBIN, &
               V,CHI,KAP,LBOX,DEL,PHIA,PHIB)
+
+         call calc_Sij(R,U,W,NT,N,NP,NBIN,&
+              V,LBOX,DEL,SijU,SijW,AU,AUV,AV,EALIGN,SijE)
       endif
-	  
+
+      
+
 !     Begin Monte Carlo simulation
       
       ISTEP=1
@@ -189,36 +224,47 @@
 
       DO WHILE (ISTEP.LE.NSTEP)
          
-         DO 10 MCTYPE=1,6
+         !KHOU 
+         DO 10 MCTYPE=1,7
             
             if (MOVEON(MCTYPE).EQ.0) then
                goto 60
             endif
 
-            call MC_move(R,U,RP,UP,NT,N,NP,IP,IB1,IB2,IT1,IT2,MCTYPE,MCAMP,WINDOW)
+            ! KHOU
+            call MC_move(R,U,W,RP,UP,WP,NT,N,NP,IP,IB1,IB2,IT1,IT2,MCTYPE,MCAMP,WINDOW)
             
 !     Calculate the change in compression and bending energy
             
             call MC_eelas(DEELAS,R,U,RP,UP,NT,N,NP,IP,IB1,IB2,IT1,IT2,EB,EPAR,EPERP,GAM,ETA)
             
 !     Calculate the change in the self-interaction energy
-            
             if (INTON.EQ.1) then
                call MC_int(DEINT,R,AB,NT,NBIN, &
                     V,CHI,KAP,LBOX,DEL,PHIA,PHIB,DPHIA,DPHIB, &
                     INDPHI,NPHI,RP,IT1,IT2)
+
+               call MC_align(DEALIGN,R,U,W,RP,UP,WP,NT,N,NP,NTOT,NBIN,V,LBOX,DEL,&
+                    AU,AUV,AV,SijU,SijW,dSijU,dSijW,IT1,IT2,INDSij)
             endif
-            
+
+!     KHOU: Calculate the change in Twist Energy
+
+            call MC_twist(DETWIST,R,U,W,RP,UP,WP,NT,N,NP,IT1,IT2,TAU)
+
+
 !     Change the position if appropriate
-            ENERGY=DEELAS+DEINT
+            ENERGY=DEELAS+DEINT+DETWIST+DEALIGN
             
             PROB=exp(-ENERGY)
+
             if (BROWN.EQ.1) then
                TEST=grnd()
             else
                TEST=1.
             endif
-            if (TEST.LE.PROB) then
+
+            if (TEST.LE.PROB) then ! Move was made
                DO 20 I=IT1,IT2
                   R(I,1)=RP(I,1)
                   R(I,2)=RP(I,2)
@@ -226,21 +272,48 @@
                   U(I,1)=UP(I,1)
                   U(I,2)=UP(I,2)
                   U(I,3)=UP(I,3)
+
+                  !KHOU
+                  W(I,1)=WP(I,1)
+                  W(I,2)=WP(I,2)
+                  W(I,3)=WP(I,3)
  20            CONTINUE
 
                if (INTON.EQ.1) then
                   DO 30 I=1,NPHI
                      J=INDPHI(I)
                      PHIA(J)=PHIA(J)+DPHIA(I)
-                     PHIB(J)=PHIB(J)+DPHIB(I)			   
+                     PHIB(J)=PHIB(J)+DPHIB(I)	
+
+                     ! Update SijU and SijW if a move was made
+                     J = INDSij(I)
+                     SijU(J,1,1) = SijU(J,1,1) + dSijU(I,1,1)
+                     SijU(J,1,2) = SijU(J,1,2) + dSijU(I,1,2)
+                     SijU(J,1,3) = SijU(J,1,3) + dSijU(I,1,3)
+                     SijU(J,2,1) = SijU(J,2,1) + dSijU(I,2,1)
+                     SijU(J,2,2) = SijU(J,2,2) + dSijU(I,2,2)
+                     SijU(J,2,3) = SijU(J,2,3) + dSijU(I,2,3)
+                     SijU(J,3,1) = SijU(J,3,1) + dSijU(I,3,1)
+                     SijU(J,3,2) = SijU(J,3,2) + dSijU(I,3,2)
+                     SijU(J,3,3) = SijU(J,3,3) + dSijU(I,3,3)
+
+                     SijW(J,1,1) = SijW(J,1,1) + dSijW(I,1,1)
+                     SijW(J,1,2) = SijW(J,1,2) + dSijW(I,1,2)
+                     SijW(J,1,3) = SijW(J,1,3) + dSijW(I,1,3)
+                     SijW(J,2,1) = SijW(J,2,1) + dSijW(I,2,1)
+                     SijW(J,2,2) = SijW(J,2,2) + dSijW(I,2,2)
+                     SijW(J,2,3) = SijW(J,2,3) + dSijW(I,2,3)
+                     SijW(J,3,1) = SijW(J,3,1) + dSijW(I,3,1)
+                     SijW(J,3,2) = SijW(J,3,2) + dSijW(I,3,2)
+                     SijW(J,3,3) = SijW(J,3,3) + dSijW(I,3,3)		  
  30               CONTINUE
 
-                  ECHI=0
+                  ECHI=0 
                   EKAP=0
                   DO 70 I=1,NBIN
                      ECHI=ECHI+(DEL**3.)*(CHI/V)*PHIA(I)*PHIB(I)
                      EKAP=EKAP+(DEL**3.)*(KAP/V)*(PHIA(I)+PHIB(I)-1.)**2.
-70                   CONTINUE
+ 70               CONTINUE
                else
                   DO 35 I=1,NBIN
                      PHIA(I)=0
@@ -250,7 +323,7 @@
 
                SUCCESS(MCTYPE)=SUCCESS(MCTYPE)+1
             endif
-            
+
 !     Adapt the amplitude of step every NADAPT steps
             !restart WINDOW every 20 NADAPT
             if (mod(ISTEP,NADAPT(MCTYPE)*20).EQ.0) then
@@ -275,7 +348,7 @@
                if (MCAMP(MCTYPE).LT.MINAMP(MCTYPE)) then
                   MCAMP(MCTYPE)=MINAMP(MCTYPE)
                   WINDOW(MCTYPE)=WINDOW(MCTYPE)-1                
-                  if ((MCTYPE.EQ.4).OR.(MCTYPE.EQ.5).OR.(MCTYPE.EQ.6)) then
+                  if ((MCTYPE.EQ.4).OR.(MCTYPE.EQ.5).OR.(MCTYPE.EQ.6).OR.(MCTYPE.EQ.7)) then
                      MOVEON(MCTYPE)=0
                   endif
                endif
@@ -290,7 +363,6 @@
                endif
 		   
                SUCCESS(MCTYPE)=0
-              
                IB=1
                DO 40 I=1,NP
                   R0(1)=nint(R(IB,1)/LBOX-0.5)*LBOX
@@ -301,8 +373,8 @@
                      R(IB,2)=R(IB,2)-R0(2)
                      R(IB,3)=R(IB,3)-R0(3)
                      IB=IB+1
- 50              CONTINUE
- 40           CONTINUE
+ 50               CONTINUE
+ 40             CONTINUE
 
             endif
 
@@ -327,6 +399,8 @@
 
          ISTEP=ISTEP+1
       ENDDO
+
+
       
       DO K=1,KNUM
          SVEC(K)=REAL(SVEC(K)) / REAL(NVEC)

@@ -71,8 +71,8 @@
          IB=IB+1
  30   CONTINUE
       
-!      PRINT*, 'main code eelas = ', EELAS(1), EELAS(2), EELAS(3)
-      
+!     PRINT*, 'main code eelas = ', EELAS(1), EELAS(2), EELAS(3)
+      PRINT*, EB, EPAR, EPERP
       RETURN
       END
       

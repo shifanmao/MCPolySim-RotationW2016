@@ -7,7 +7,7 @@
 !     Andrew Spakowitz
 !     Written 4-16-04
       
-      SUBROUTINE initcond(R,U,AB,NT,N,NP,IDUM,FRMFILE,PARA,LBOX)
+      SUBROUTINE initcond(R,U,W,AB,NT,N,NP,IDUM,FRMFILE,PARA,LBOX)
 
       use mt19937, only : grnd, init_genrand, rnorm, mt, mti
       
@@ -15,6 +15,7 @@
       
       DOUBLE PRECISION R(NT,3)  ! Bead positions
       DOUBLE PRECISION U(NT,3)  ! Tangent vectors
+      DOUBLE PRECISION W(NT,3)  ! Twist vectors (KHOU)
       INTEGER AB(NT)            ! Chemical identity of beads
       INTEGER N,NP,NT           ! Number of beads
       DOUBLE PRECISION GAM       ! Equil bead separation
@@ -66,7 +67,14 @@
             READ(5,*) U(I,1),U(I,2),U(I,3)
  20      CONTINUE 
          CLOSE(5)
-      endif
+
+         !KHOU
+         OPEN (UNIT = 5, FILE = 'input/w0', STATUS = 'OLD')
+         DO 30 I=1,NT
+            READ(5,*) U(I,1),U(I,2),U(I,3)
+ 30      CONTINUE
+         CLOSE(5)
+      endif 
       
 !     Set the initial conformation to a straight chain if CHOICE=1
       
@@ -83,22 +91,29 @@
          endif
 
          IB=1
-         DO 30 I=1,NP
+         DO 40 I=1,NP
             R0(1)=grnd()*LBOX
             R0(2)=grnd()*LBOX
             R0(3)=grnd()*LBOX
-            DO 40 J=1,N
+            DO 50 J=1,N
                R(IB,1)=R0(1)
                R(IB,2)=R0(2)+GAM*(J-N/2.-0.5)
                R(IB,3)=R0(3)
                U(IB,1)=0.
                U(IB,2)=1.
-               U(IB,3)=0.			   
+               U(IB,3)=0.	
+
+               !KHOU
+               W(IB,1)=1.
+               W(IB,2)=0.
+               W(IB,3)=0.		   
                IB=IB+1
- 40         CONTINUE
- 30      CONTINUE
+ 50         CONTINUE
+ 40      CONTINUE
          
       endif
+
+
       
 !     Create an input file if non-existent
       

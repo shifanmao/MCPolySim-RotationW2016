@@ -1,40 +1,55 @@
+cp -r testinputs/input1 input/input
 ./runwlcsim
-cp -r data savedata/data1
+cp -r data rotation/control
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input2 input/input
 ./runwlcsim
-cp -r data savedata/data2
+cp -r data rotation/tau01
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input3 input/input
 ./runwlcsim
-cp -r data savedata/data3
+cp -r data rotation/tau1
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input4 input/input
 ./runwlcsim
-cp -r data savedata/data4
+cp -r data rotation/tau10
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input5 input/input
 ./runwlcsim
-cp -r data savedata/data5
+cp -r data rotation/tau100
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input6 input/input
 ./runwlcsim
-cp -r data savedata/data6
+cp -r data rotation/au100
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input7 input/input
 ./runwlcsim
-cp -r data savedata/data7
+cp -r data rotation/au1k
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input8 input/input
 ./runwlcsim
-cp -r data savedata/data8
+cp -r data rotation/au10k
+rm -r trash
+mkdir trash
+
+cp -r testinputs/input9 input/input
 ./runwlcsim
-cp -r data savedata/data9
-./runwlcsim
-cp -r data savedata/data10
-./runwlcsim
-cp -r data savedata/data11
-./runwlcsim
-cp -r data savedata/data12
-./runwlcsim
-cp -r data savedata/data13
-./runwlcsim
-cp -r data savedata/data14
-./runwlcsim
-cp -r data savedata/data15
-./runwlcsim
-cp -r data savedata/data16
-./runwlcsim
-cp -r data savedata/data17
-./runwlcsim
-cp -r data savedata/data18
-./runwlcsim
-cp -r data savedata/data19
-./runwlcsim
-cp -r data savedata/data20
+cp -r data rotation/au100k
+rm -r trash
+mkdir trash
+
+

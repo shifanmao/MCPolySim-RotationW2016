@@ -2,16 +2,19 @@
 
 ! Find change in bead position for a crank-shaft type move
      
-      SUBROUTINE MC_move(R,U,RP,UP,NT,N,NP,IP,IB1,IB2,IT1,IT2,MCTYPE,MCAMP,WINDOW)
+      SUBROUTINE MC_move(R,U,W,RP,UP,WP,NT,N,NP,IP,IB1,IB2,IT1,IT2,MCTYPE,MCAMP,WINDOW)
 
       use mt19937, only : grnd, sgrnd, rnorm, mt, mti
 
       PARAMETER (PI=3.141592654) ! Value of pi
       
-      DOUBLE PRECISION R(NT,3)  ! Bead positions
-      DOUBLE PRECISION U(NT,3)  ! Tangent vectors
+      DOUBLE PRECISION R(NT,3)   ! Bead positions
+      DOUBLE PRECISION U(NT,3)   ! Tangent vectors
+      DOUBLE PRECISION W(NT,3)   ! Twist vectors (KHOU)
       DOUBLE PRECISION RP(NT,3)  ! Bead positions
       DOUBLE PRECISION UP(NT,3)  ! Tangent vectors
+      DOUBLE PRECISION WP(NT,3)  ! Twist vectors (KHOU)
+
       INTEGER N,NP,NT           ! Number of beads
 
       INTEGER IP                ! Test polymer 
@@ -32,13 +35,13 @@
       DOUBLE PRECISION ALPHA    ! Angle of move
       DOUBLE PRECISION BETA     ! Angle of move
       
-!     MC adaptation variables
+!     MC adaptation variables (KHOU)
       
-      DOUBLE PRECISION MCAMP(6) ! Amplitude of random change      
+      DOUBLE PRECISION MCAMP(7) ! Amplitude of random change      
       INTEGER MCTYPE            ! Type of MC move
       DOUBLE PRECISION DR(3)    ! Displacement for slide move
       INTEGER TEMP
-      INTEGER WINDOW(6)			! Size of window for bead selection
+      INTEGER WINDOW(7)			! Size of window for bead selection
 
 !     Perform crank-shaft move (MCTYPE 1)
           
@@ -114,6 +117,11 @@
             UP(I,1)=ROT(1,1)*U(I,1)+ROT(1,2)*U(I,2)+ROT(1,3)*U(I,3)
             UP(I,2)=ROT(2,1)*U(I,1)+ROT(2,2)*U(I,2)+ROT(2,3)*U(I,3)
             UP(I,3)=ROT(3,1)*U(I,1)+ROT(3,2)*U(I,2)+ROT(3,3)*U(I,3)
+
+            !KHOU
+            WP(I,1)=ROT(1,1)*W(I,1)+ROT(1,2)*W(I,2)+ROT(1,3)*W(I,3)
+            WP(I,2)=ROT(2,1)*W(I,1)+ROT(2,2)*W(I,2)+ROT(2,3)*W(I,3)
+            WP(I,3)=ROT(3,1)*W(I,1)+ROT(3,2)*W(I,2)+ROT(3,3)*W(I,3)
  10      CONTINUE
 
 !     Perform slide move (MCTYPE 2)
@@ -150,6 +158,11 @@
             UP(I,1)=U(I,1)
             UP(I,2)=U(I,2)
             UP(I,3)=U(I,3)
+
+            !KHOU
+            WP(I,1)=W(I,1)
+            WP(I,2)=W(I,2)
+            WP(I,3)=W(I,3)
  20      CONTINUE    
              
 !     Perform pivot move (MCTYPE 3)
@@ -215,7 +228,12 @@
             RP(I,3)=ROT(3,4)+ROT(3,1)*R(I,1)+ROT(3,2)*R(I,2)+ROT(3,3)*R(I,3)
             UP(I,1)=ROT(1,1)*U(I,1)+ROT(1,2)*U(I,2)+ROT(1,3)*U(I,3)
             UP(I,2)=ROT(2,1)*U(I,1)+ROT(2,2)*U(I,2)+ROT(2,3)*U(I,3)
-            UP(I,3)=ROT(3,1)*U(I,1)+ROT(3,2)*U(I,2)+ROT(3,3)*U(I,3)		 
+            UP(I,3)=ROT(3,1)*U(I,1)+ROT(3,2)*U(I,2)+ROT(3,3)*U(I,3)		
+
+            !KHOU
+            WP(I,1)=ROT(1,1)*W(I,1)+ROT(1,2)*W(I,2)+ROT(1,3)*W(I,3)
+            WP(I,2)=ROT(2,1)*W(I,1)+ROT(2,2)*W(I,2)+ROT(2,3)*W(I,3)
+            WP(I,3)=ROT(3,1)*W(I,1)+ROT(3,2)*W(I,2)+ROT(3,3)*W(I,3)
  30      CONTINUE
 
 !     Perform rotate move (MCTYPE 4)
@@ -259,7 +277,12 @@
          UP(I,2)=ROT(2,1)*U(I,1)+ROT(2,2)*U(I,2)+ROT(2,3)*U(I,3)
          UP(I,3)=ROT(3,1)*U(I,1)+ROT(3,2)*U(I,2)+ROT(3,3)*U(I,3)
 
-!     Perform a full chain rotation
+         !KHOU
+         WP(I,1)=ROT(1,1)*W(I,1)+ROT(1,2)*W(I,2)+ROT(1,3)*W(I,3)
+         WP(I,2)=ROT(2,1)*W(I,1)+ROT(2,2)*W(I,2)+ROT(2,3)*W(I,3)
+         WP(I,3)=ROT(3,1)*W(I,1)+ROT(3,2)*W(I,2)+ROT(3,3)*W(I,3)
+
+!     Perform a full chain rotation (MCTYPE 5)
 
       elseif (MCTYPE.EQ.5) then
          
@@ -302,9 +325,14 @@
             UP(I,1)=ROT(1,1)*U(I,1)+ROT(1,2)*U(I,2)+ROT(1,3)*U(I,3)
             UP(I,2)=ROT(2,1)*U(I,1)+ROT(2,2)*U(I,2)+ROT(2,3)*U(I,3)
             UP(I,3)=ROT(3,1)*U(I,1)+ROT(3,2)*U(I,2)+ROT(3,3)*U(I,3)		 
+
+           !KHOU
+            WP(I,1)=ROT(1,1)*W(I,1)+ROT(1,2)*W(I,2)+ROT(1,3)*W(I,3)
+            WP(I,2)=ROT(2,1)*W(I,1)+ROT(2,2)*W(I,2)+ROT(2,3)*W(I,3)
+            WP(I,3)=ROT(3,1)*W(I,1)+ROT(3,2)*W(I,2)+ROT(3,3)*W(I,3)
  40      CONTINUE
 
-!     Perform full chain slide move (MCTYPE 2)
+!     Perform full chain slide move (MCTYPE 6)
          
       elseif (MCTYPE.EQ.6) then
          
@@ -325,10 +353,67 @@
             UP(I,1)=U(I,1)
             UP(I,2)=U(I,2)
             UP(I,3)=U(I,3)
+
+            !KHOU
+            WP(I,1)=W(I,1)
+            WP(I,2)=W(I,2)
+            WP(I,3)=W(I,3)
  50      CONTINUE    
 
-      endif
+!     KHOU: Perform a W-vector rotation (MCTYPE 7)
+!     This selects a random bead and rotates it about the position vector U, so as to rotate W
+!     without changing the invariant that U and W should be orthogonal.
+
+      elseif (MCTYPE.EQ.7) then
+         
+         ! Select Random Bead
+         IP=nint(0.5+grnd()*NP)
+         IB1=nint(0.5+grnd()*N)
+         IB2=IB1
+         IT1=N*(IP-1)+IB1
+         IT2=N*(IP-1)+IB2
+         
+
+         ! Set rotation axis to the orientation vector at U
+         I = IT1
+         TA(1) = U(I,1)
+         TA(2) = U(I,2)
+         TA(3) = U(I,3)
+         
+         ! Pick a random rotation angle
+         ALPHA=MCAMP(7)*(grnd()-0.5)
+             
+         ROT(1,1)=TA(1)**2.+(TA(2)**2.+TA(3)**2.)*cos(ALPHA)
+         ROT(1,2)=TA(1)*TA(2)*(1.-cos(ALPHA))-TA(3)*sin(ALPHA)
+         ROT(1,3)=TA(1)*TA(3)*(1.-cos(ALPHA))+TA(2)*sin(ALPHA)
+         ROT(1,4)=(P1(1)*(1.-TA(1)**2.) &
+       -TA(1)*(P1(2)*TA(2)+P1(3)*TA(3)))*(1.-cos(ALPHA))+(P1(2)*TA(3)-P1(3)*TA(2))*sin(ALPHA)
+             
+         ROT(2,1)=TA(1)*TA(2)*(1.-cos(ALPHA))+TA(3)*sin(ALPHA)
+         ROT(2,2)=TA(2)**2.+(TA(1)**2.+TA(3)**2.)*cos(ALPHA)
+         ROT(2,3)=TA(2)*TA(3)*(1.-cos(ALPHA))-TA(1)*sin(ALPHA)
+         ROT(2,4)=(P1(2)*(1.-TA(2)**2.) &
+       -TA(2)*(P1(1)*TA(1)+P1(3)*TA(3)))*(1.-cos(ALPHA))+(P1(3)*TA(1)-P1(1)*TA(3))*sin(ALPHA)
+             
+         ROT(3,1)=TA(1)*TA(3)*(1.-cos(ALPHA))-TA(2)*sin(ALPHA)
+         ROT(3,2)=TA(2)*TA(3)*(1.-cos(ALPHA))+TA(1)*sin(ALPHA)
+         ROT(3,3)=TA(3)**2.+(TA(1)**2.+TA(2)**2.)*cos(ALPHA)
+         ROT(3,4)=(P1(3)*(1.-TA(3)**2.) &
+       -TA(3)*(P1(1)*TA(1)+P1(2)*TA(2)))*(1.-cos(ALPHA))+(P1(1)*TA(2)-P1(2)*TA(1))*sin(ALPHA)
+
+         UP(I,1)=ROT(1,1)*U(I,1)+ROT(1,2)*U(I,2)+ROT(1,3)*U(I,3)
+         UP(I,2)=ROT(2,1)*U(I,1)+ROT(2,2)*U(I,2)+ROT(2,3)*U(I,3)
+         UP(I,3)=ROT(3,1)*U(I,1)+ROT(3,2)*U(I,2)+ROT(3,3)*U(I,3)
+
+         !KHOU
+         WP(I,1)=ROT(1,1)*W(I,1)+ROT(1,2)*W(I,2)+ROT(1,3)*W(I,3)
+         WP(I,2)=ROT(2,1)*W(I,1)+ROT(2,2)*W(I,2)+ROT(2,3)*W(I,3)
+         WP(I,3)=ROT(3,1)*W(I,1)+ROT(3,2)*W(I,2)+ROT(3,3)*W(I,3)
+
+         
+      end if
       
+
       RETURN      
       END
       

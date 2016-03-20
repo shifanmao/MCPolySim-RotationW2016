@@ -12,7 +12,7 @@
       DOUBLE PRECISION GAM,ETA
       DOUBLE PRECISION XIR,XIU
       DOUBLE PRECISION L0       ! Equilibrium segment length
-	  DOUBLE PRECISION LHC      ! Length of HC int
+	DOUBLE PRECISION LHC      ! Length of HC int
       DOUBLE PRECISION VHC      ! HC strength
       DOUBLE PRECISION M
       DOUBLE PRECISION DT

@@ -43,7 +43,7 @@
 
 !INPUT 10
 !EPS, Chain rigidity
-1.000
+0.01
 
 !INPUT 11
 !CHI0, Initial CHI
@@ -59,7 +59,7 @@
 
 !INPUT 14
 !INDMAX, Total number of savepoints
-1001
+3000
 
 !INPUT 15
 !FRMFILE
@@ -90,8 +90,8 @@
 0
 
 !INPUT 22
-!NSTEP 
-1000
+!NSTEP  (set to 5k for long runs)
+5000
 
 !INPUT 23
 !WRTON 
@@ -117,3 +117,18 @@
 !NRMAX 
 2
 
+!INPUT 29
+!TAU
+100.0
+
+!INPUT 30
+!AU
+0.0
+
+!INPUT 31
+!AUV
+0
+
+!INPUT 32
+!AV
+0
